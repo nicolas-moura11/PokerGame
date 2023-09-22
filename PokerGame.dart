@@ -1,22 +1,19 @@
-import 'Aposta.dart';
+import 'dart:io';
+import 'dart:math';
+import 'Carta.dart';
 import 'Baralho.dart';
 import 'MaoDoJogador.dart';
 import 'Mesa.dart';
-import 'dart:io';
+import 'Jogador.dart';
 
-class Jogador {
-  String nome;
-  int fichas;
+enum Acao { Desistir, Passar, Apostar, Pagar, Aumentar }
 
-  Jogador(this.nome, this.fichas);
-}
 
 class PokerGame {
-  late List<MaoDoJogador> jogadores;
-  late Mesa mesa;
-  late Baralho baralho;
-
-  PokerGame(this.jogadores, this.mesa, this.baralho);
+  final List<Jogador> jogadores = [];
+  final Mesa mesa = Mesa();
+  final Baralho baralho = Baralho();
+  int pote = 0;
 
   void menuPrincipal() {
     bool jogarNovamente = true;
@@ -32,6 +29,8 @@ class PokerGame {
 
       switch (entrada) {
         case '1':
+          criarJogadores();
+          comprarFichas();
           iniciarJogo();
           break;
         case '2':
@@ -46,46 +45,6 @@ class PokerGame {
     print('Obrigado por jogar! Até a próxima.');
   }
 
-  void iniciarJogo() {
-    baralho.embaralhar();
-    for (var jogador in jogadores) {
-      jogador.adicionarCarta(baralho.distribuirCarta());
-      jogador.adicionarCarta(baralho.distribuirCarta());
-    }
-  }
-
-  int objetivoMinimo = 100;
-
-  void rodadaDeApostas() {
-    print('Iniciando rodada de apostas...');
-    List<Aposta> apostas = [];
-
-    // Implemente a lógica de apostas dos jogadores aqui
-    for (var jogador in jogadores) {
-      int fichasApostadas = fazerAposta(jogador);
-      apostas.add(Aposta(jogador, fichasApostadas));
-    }
-
-    // Determine o vencedor da rodada com base nas mãos dos jogadores
-    MaoDoJogador vencedor = determinarVencedor();
-
-    print('O vencedor da rodada é: ${vencedor.toString()}');
-
-    // Distribua as fichas para o vencedor
-    distribuirFichas(vencedor, apostas);
-  }
-
-  void distribuirFichas(MaoDoJogador vencedor, List<Aposta> apostas) {
-    print('Distribuindo fichas...');
-    for (var aposta in apostas) {
-      if (aposta.jogador == vencedor) {
-        vencedor.adicionarFichas(aposta.fichasApostadas * (apostas.length - 1));
-      } else {
-        aposta.jogador.adicionarFichas(-aposta.fichasApostadas);
-      }
-    }
-  }
-
   void criarJogadores() {
     print('Quantos jogadores deseja adicionar?');
     int quantidadeJogadores = int.parse(stdin.readLineSync() ?? '0');
@@ -93,13 +52,21 @@ class PokerGame {
     for (int i = 1; i <= quantidadeJogadores; i++) {
       print('Nome do Jogador $i:');
       String nome = stdin.readLineSync() ?? '';
-      jogadores.add(Jogador(nome, 1000)
-          as MaoDoJogador); // Você pode definir uma quantidade inicial de fichas
+      jogadores.add(Jogador(nome, 0));
     }
   }
 
-  int fazerAposta(MaoDoJogador jogador) {
-    print('${jogador.toString()}, é a sua vez de apostar.');
+  void comprarFichas() {
+    print('Quantas fichas cada jogador deseja comprar?');
+    int quantidadeFichas = int.parse(stdin.readLineSync() ?? '0');
+
+    for (var jogador in jogadores) {
+      jogador.adicionarFichas(quantidadeFichas);
+    }
+  }
+
+  int fazerAposta(Jogador jogador) {
+    print('${jogador.nome}, é a sua vez de apostar.');
 
     int fichasApostadas = 0;
     bool apostaValida = false;
@@ -109,54 +76,156 @@ class PokerGame {
       String entrada = stdin.readLineSync() ?? '';
       fichasApostadas = int.tryParse(entrada) ?? 0;
 
-      // Implemente validações adicionais, como verificar se o jogador tem fichas suficientes, etc.
-      if (fichasApostadas >= 0) {
+      if (fichasApostadas >= 0 && fichasApostadas <= jogador.fichas) {
         apostaValida = true;
       } else {
         print('Aposta inválida. Tente novamente.');
       }
     }
 
-    // Atualize o estado do jogador com a aposta feita, se necessário
+    jogador.fichas -= fichasApostadas;
+    pote += fichasApostadas;
 
     return fichasApostadas;
+  }
+
+  Acao tomarAcao(Jogador jogador, int apostaMinima) {
+    jogador.mostrarMao();
+
+    print('Ações disponíveis:');
+    print('1. Desistir');
+    print('2. Passar');
+    print('3. Apostar');
+    print('4. Pagar');
+    print('5. Aumentar');
+    print('Digite o número da ação desejada:');
+
+    String entrada = stdin.readLineSync() ?? '';
+
+    switch (entrada) {
+      case '1':
+        return Acao.Desistir;
+      case '2':
+        return Acao.Passar;
+      case '3':
+        if (jogador.fichas == 0) {
+          print('Você não tem fichas para apostar.');
+          return tomarAcao(jogador, apostaMinima);
+        }
+        return Acao.Apostar;
+      case '4':
+        if (jogador.fichas < apostaMinima) {
+          print('Você não tem fichas suficientes para pagar a aposta.');
+          return tomarAcao(jogador, apostaMinima);
+        }
+        return Acao.Pagar;
+      case '5':
+        if (jogador.fichas == 0) {
+          print('Você não tem fichas para aumentar a aposta.');
+          return tomarAcao(jogador, apostaMinima);
+        }
+        return Acao.Aumentar;
+      default:
+        print('Opção inválida. Tente novamente.');
+        return tomarAcao(jogador, apostaMinima);
+    }
+  }
+
+  void rodadaDeApostas() {
+    print('Iniciando rodada de apostas...');
+    int apostaMinima = 0;
+
+    for (var jogador in jogadores) {
+      if (jogador.fichas > 0) {
+        Acao acao = tomarAcao(jogador, apostaMinima);
+
+        switch (acao) {
+          case Acao.Desistir:
+            print('${jogador.nome} desistiu da rodada.');
+            break;
+          case Acao.Passar:
+            print('${jogador.nome} passou.');
+            break;
+          case Acao.Apostar:
+            print('${jogador.nome} está fazendo uma aposta.');
+            int fichasApostadas = fazerAposta(jogador);
+            apostaMinima = max(apostaMinima, fichasApostadas);
+            break;
+          case Acao.Pagar:
+            print('${jogador.nome} está pagando a aposta anterior.');
+            int fichasApostadas = fazerAposta(jogador);
+            break;
+          case Acao.Aumentar:
+            print('${jogador.nome} está aumentando a aposta.');
+            int fichasApostadas = fazerAposta(jogador);
+            apostaMinima = max(apostaMinima, fichasApostadas);
+            break;
+        }
+      } else {
+        print('${jogador.nome} não tem fichas suficientes e está fora da rodada.');
+      }
+    }
+
+    print('Fim da rodada de apostas. Pote atual: $pote fichas.');
+  }
+
+  void iniciarJogo() {
+    baralho.embaralhar();
+    for (var jogador in jogadores) {
+      jogador.adicionarCarta(baralho.distribuirCarta());
+      jogador.adicionarCarta(baralho.distribuirCarta());
+    }
+
+    while (true) {
+      // Fase de Pré-Flop
+      rodadaDeApostas();
+
+      // Fase de Flop (Exemplo: revelando 3 cartas comunitárias)
+      revelarCartasComunitarias(3);
+      rodadaDeApostas();
+
+      // Fase de Turn (Exemplo: revelando 1 carta comunitária)
+      revelarCartasComunitarias(1);
+      rodadaDeApostas();
+
+      // Fase de River (Exemplo: revelando 1 carta comunitária)
+      revelarCartasComunitarias(1);
+      rodadaDeApostas();
+
+      // Showdown (Determinar o vencedor da mão)
+      // Implemente a lógica para determinar o vencedor da rodada com base nas apostas e mãos dos jogadores.
+      encerrarMao();
+
+      // Perguntar se os jogadores desejam continuar jogando
+      print('Deseja continuar jogando? (S para Sim, qualquer outra tecla para sair)');
+      String continuar = stdin.readLineSync()?.toUpperCase() ?? '';
+
+      if (continuar != 'S') {
+        break;
+      }
+    }
+
+    encerrarJogo();
   }
 
   void revelarCartasComunitarias(int numCartas) {
     print('Revelando $numCartas cartas comunitárias...');
     mesa.distribuirCartasComunitarias(baralho, numCartas);
-  }
-
-  MaoDoJogador determinarVencedor() {
-    MaoDoJogador vencedor = jogadores[0]; // Inicialize com o primeiro jogador
-    for (var jogador in jogadores) {
-      if (jogador.cartas.length > vencedor.cartas.length) {
-        vencedor = jogador;
-      }
-    }
-    return vencedor;
+    mesa.mostrarCartasComunitarias();
   }
 
   void encerrarMao() {
     print('Encerrando a mão...');
-
     // Implemente ações para encerrar a mão, como reiniciar as cartas e redistribuir fichas
     baralho.embaralhar();
     mesa.limparCartasComunitarias();
 
     for (var jogador in jogadores) {
       jogador.limparMao();
+      jogador.apostaAtual = 0;
     }
 
-    // Verifique se algum jogador alcançou um objetivo específico (por exemplo, um número mínimo de fichas)
-    for (var jogador in jogadores) {
-      if (jogador.fichas >= objetivoMinimo) {
-        print('${jogador.toString()} alcançou o objetivo mínimo de fichas!');
-        // Você pode executar ações adicionais aqui, como declarar o vencedor do jogo
-      }
-    }
-
-    // Você pode adicionar mais ações relevantes ao encerramento da mão, dependendo das regras do seu jogo.
+    pote = 0;
   }
 
   void encerrarJogo() {
@@ -164,14 +233,12 @@ class PokerGame {
 
     // Implemente ações para encerrar o jogo
     bool houveEmpate = false;
-    MaoDoJogador vencedorGeral =
-        jogadores[0]; // Inicialize com o primeiro jogador
+    Jogador vencedorGeral = jogadores[0]; // Inicialize com o primeiro jogador
 
     for (var jogador in jogadores) {
       if (jogador.fichas > vencedorGeral.fichas) {
         vencedorGeral = jogador;
-        houveEmpate =
-            false; // Se encontramos um novo líder, redefina a flag de empate
+        houveEmpate = false; // Se encontramos um novo líder, redefina a flag de empate
       } else if (jogador.fichas == vencedorGeral.fichas) {
         houveEmpate = true; // Houve um empate
       }
@@ -180,28 +247,19 @@ class PokerGame {
     if (houveEmpate) {
       print('O jogo terminou em empate.');
     } else {
-      print('O vencedor geral do jogo é: ${vencedorGeral.toString()}');
+      print('O vencedor geral do jogo é: ${vencedorGeral.nome}');
     }
 
     print('Obrigado por jogar! Até a próxima.');
   }
 
-  MaoDoJogador? determinarVencedorGeral() {
-    MaoDoJogador vencedorGeral =
-        jogadores[0]; // Inicialize com o primeiro jogador
-    for (var jogador in jogadores) {
-      if (jogador.fichas > vencedorGeral.fichas) {
-        vencedorGeral = jogador;
-      }
-    }
-
-    return vencedorGeral;
-  }
-
   void main() {
     final pokerGame = PokerGame();
-
-    pokerGame.criarJogadores();
     pokerGame.menuPrincipal();
   }
+}
+
+void main() {
+  final pokerGame = PokerGame();
+  pokerGame.menuPrincipal();
 }
