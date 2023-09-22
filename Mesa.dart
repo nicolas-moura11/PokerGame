@@ -1,12 +1,7 @@
 import 'Baralho.dart';
 import 'Carta.dart';
-
 class Mesa {
-  late List<Carta> cartasComunitarias;
-
-  MesaPoker() {
-    cartasComunitarias = [];
-  }
+  List<Carta> cartasComunitarias = [];
 
   void distribuirCartasComunitarias(Baralho baralho, int numCartas) {
     for (var i = 0; i < numCartas; i++) {
@@ -14,12 +9,14 @@ class Mesa {
     }
   }
 
-   void limparCartasComunitarias() {
+  void limparCartasComunitarias() {
     cartasComunitarias.clear();
   }
 
-  @override
-  String toString() {
-    return cartasComunitarias.map((carta) => carta.toString()).join(', ');
+  void mostrarCartasComunitarias() {
+    print('Cartas comunitárias:');
+    for (var carta in cartasComunitarias) {
+      print(' - $carta');
+    }
   }
 }
