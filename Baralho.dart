@@ -1,24 +1,18 @@
+// Classe Baralho.dart
 import 'Carta.dart';
 
-class Baralho{
-  late List<Carta> cartas = [];
+class Baralho {
+  final List<Carta> cartas = [];
 
   Baralho() {
-    cartas = criarBaralho();
-  }
+    final naipes = ['Copas', 'Ouros', 'Paus', 'Espadas'];
+    final valores = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
 
-  List<Carta> criarBaralho() {
-    final naipes = ['Espadas', 'Copas', 'Ouros', 'Paus'];
-    final valores = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'Valete', 'Dama', 'Rei', 'Ás'];
-    List<Carta> baralho = [];
-
-    for (var naipe in naipes) {
-      for (var valor in valores) {
-        baralho.add(Carta(naipe, valor));
+    for (final naipe in naipes) {
+      for (final valor in valores) {
+        cartas.add(Carta(naipe, valor));
       }
     }
-
-    return baralho;
   }
 
   void embaralhar() {
@@ -26,6 +20,6 @@ class Baralho{
   }
 
   Carta distribuirCarta() {
-    return cartas.removeAt(0);
+    return cartas.removeLast();
   }
 }
