@@ -1,9 +1,10 @@
+// Classe MaoDoJogador.dart
 import 'Carta.dart';
 
 class MaoDoJogador {
   late List<Carta> cartas;
 
-  MaoJogador() {
+  MaoDoJogador() {
     cartas = [];
   }
 
@@ -16,7 +17,7 @@ class MaoDoJogador {
     return cartas.map((carta) => carta.toString()).join(', ');
   }
 
-   int fichas = 0;
+  int fichas = 0;
 
   void adicionarFichas(int quantidade) {
     fichas += quantidade;
@@ -28,11 +29,10 @@ class MaoDoJogador {
       print('Suas fichas permaneceram inalteradas.');
     }
   }
-   void limparMao() {
+
+  void limparMao() {
     cartas.clear();
   }
-  
-  void limparCartasComunitarias() {
-    
-  }
+
+// Você pode adicionar métodos adicionais aqui, se necessário.
 }
