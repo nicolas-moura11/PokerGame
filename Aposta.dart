@@ -1,8 +1,9 @@
 import 'MaoDoJogador.dart';
+import 'Jogador.dart';
 
 class Aposta {
-  final MaoDoJogador jogador;
-  int fichasApostadas;
+  final Jogador jogador;
+  final int fichasApostadas;
 
   Aposta(this.jogador, this.fichasApostadas);
 }
