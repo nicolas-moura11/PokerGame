@@ -1,11 +1,16 @@
-class Carta {
-  late String naipe;
-  late String value;
+import 'dart:io';
+import 'dart:math';
 
-  Carta(this.naipe, this.value);
+enum Acao { Desistir, Passar, Apostar, Pagar, Aumentar }
+
+class Carta {
+  final String naipe;
+  final String valor;
+
+  Carta(this.naipe, this.valor);
 
   @override
   String toString() {
-    return '$value of $naipe';
+    return '$valor de $naipe';
   }
 }
