@@ -1,27 +1,14 @@
 import 'Carta.dart';
 class Jogador {
   String nome;
+  List<Carta> holeCards;
   int fichas;
-  List<Carta> mao = [];
-  int apostaAtual = 0;
 
-  Jogador(this.nome, this.fichas);
+  Jogador(this.nome, this.holeCards, this.fichas);
 
-  void adicionarCarta(Carta carta) {
-    mao.add(carta);
-  }
-
-  void limparMao() {
-    mao.clear();
-  }
-
-  void adicionarFichas(int quantidade) {
-    fichas += quantidade;
-  }
-
-  void mostrarMao() {
-    print('$nome, suas cartas são:');
-    for (var carta in mao) {
+  void mostrarHoleCards() {
+    print('$nome tem as seguintes cartas hole cards:');
+    for (var carta in holeCards) {
       print(' - $carta');
     }
   }
