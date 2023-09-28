@@ -2,9 +2,6 @@
 import 'dart:io';
 import 'dart:math';
 
-
-
-
 enum Acao { Desistir, Passar, Apostar, Pagar, Aumentar }
 
 class AvaliadorDeMao {
@@ -262,7 +259,12 @@ class PokerGame {
   int pote = 0;
   final Mesa mesa = Mesa();
   final Baralho baralho = Baralho();
-
+  int smallBlind = 10; // Define o valor do small blind
+  int bigBlind = 20;   // Define o valor do big blind
+  int rodadaAtual = 0;
+  late Jogador dealer; // Adicione a variável dealer aqui
+  late Jogador bigblind;
+  late Jogador jogadorAtual; // Adicione a variável jogadorAtual aqui
 
   void menuPrincipal() {
     bool jogarNovamente = true;
@@ -297,6 +299,7 @@ class PokerGame {
     print('-' * 30); // Linha horizontal para separação
     print('Obrigado por jogar! Até a próxima.');
   }
+
   // Avalia uma mão de jogador e retorna sua categoria de mão
   String avaliarMao(List<Carta> mao) {
     mao.sort((a, b) => Carta.valorCarta(b).compareTo(Carta.valorCarta(a)));
@@ -539,6 +542,28 @@ class PokerGame {
   }
 
 
+  // Método para determinar o dealer no início do jogo
+  void determinarDealer() {
+    // Embaralhe a lista de jogadores
+    jogadores.shuffle();
+    dealer = jogadores[0]; // O primeiro jogador na lista é o dealer
+    jogadorAtual = dealer; // Comece com o dealer como jogador atual
+  }
+
+  // Método para avançar para o próximo jogador na rodada
+  void proximoJogador() {
+    int indiceJogadorAtual = jogadores.indexOf(jogadorAtual);
+    if (indiceJogadorAtual == jogadores.length - 1) {
+      // Voltou ao dealer, encerrando a rodada
+      rodadaAtual++;
+      // Reinicie a ação com o dealer
+      jogadorAtual = dealer;
+    } else {
+      // Avance para o próximo jogador na lista
+      jogadorAtual = jogadores[indiceJogadorAtual + 1];
+    }
+  }
+
   void criarJogadores() {
     print('Quantos jogadores deseja adicionar?');
     int quantidadeJogadores = int.parse(stdin.readLineSync() ?? '0');
@@ -632,58 +657,80 @@ class PokerGame {
     }
   }
 
+  void distribuirBlinds() {
+    print('Distribuindo blinds...');
+
+    // Determine a ordem dos jogadores para distribuir os blinds
+    int indexOfSmallBlind = (rodadaAtual % jogadores.length);
+    int indexOfBigBlind = (rodadaAtual + 1) % jogadores.length;
+
+    // Defina o small blind e o big blind para os jogadores
+    jogadores[indexOfSmallBlind].fichas -= smallBlind;
+    jogadores[indexOfBigBlind].fichas -= bigBlind;
+    pote += smallBlind + bigBlind;
+
+    // Exiba na tela que o jogador fez as apostas de small blind e big blind
+    print('${jogadores[indexOfSmallBlind].nome} fez a aposta do Small Blind de $smallBlind fichas.');
+    print('${jogadores[indexOfBigBlind].nome} fez a aposta do Big Blind de $bigBlind fichas.');
+  }
+
   void rodadaDeApostas() {
     print('Iniciando rodada de apostas...');
-    int apostaMinima = 0;
-    int jogadoresAtivos = jogadores.length; // Inicialmente, todos os jogadores estão ativos
+    int apostaMinima = bigBlind; // A aposta mínima na primeira rodada é o big blind
+    int jogadoresAtivos = jogadores.length;
 
-    for (var jogador in jogadores) {
-      if (jogador.fichas > 0) {
-        Acao acao = tomarAcao(jogador, apostaMinima);
+    // Determine o índice do jogador que começa a rodada de apostas
+    int indiceJogadorAtual = (rodadaAtual + 2) % jogadores.length;
+
+    // Continue enquanto houver mais de um jogador ativo
+    while (jogadoresAtivos > 1) {
+      Jogador jogadorAtual = jogadores[indiceJogadorAtual];
+
+      if (jogadorAtual.fichas > 0) {
+        Acao acao = tomarAcao(jogadorAtual, apostaMinima);
 
         switch (acao) {
           case Acao.Desistir:
-            print('${jogador.nome} desistiu da rodada.');
+            print('${jogadorAtual.nome} desistiu da rodada.');
             jogadoresAtivos--;
             break;
           case Acao.Passar:
-            print('${jogador.nome} passou.');
+            print('${jogadorAtual.nome} passou.');
             jogadoresAtivos--;
             break;
           case Acao.Apostar:
-            print('${jogador.nome} está fazendo uma aposta.');
-            int fichasApostadas = fazerAposta(jogador);
+            print('${jogadorAtual.nome} está fazendo uma aposta.');
+            int fichasApostadas = fazerAposta(jogadorAtual);
             apostaMinima = max(apostaMinima, fichasApostadas);
             break;
           case Acao.Pagar:
-            print('${jogador.nome} está pagando a aposta anterior.');
-            int fichasApostadas = fazerAposta(jogador);
+            print('${jogadorAtual.nome} está pagando a aposta anterior.');
+            int fichasApostadas = fazerAposta(jogadorAtual);
             break;
           case Acao.Aumentar:
-            print('${jogador.nome} está aumentando a aposta.');
-            int fichasApostadas = fazerAposta(jogador);
+            print('${jogadorAtual.nome} está aumentando a aposta.');
+            int fichasApostadas = fazerAposta(jogadorAtual);
             apostaMinima = max(apostaMinima, fichasApostadas);
             break;
         }
       } else {
-        print('${jogador.nome} não tem fichas suficientes e está fora da rodada.');
+        print('${jogadorAtual.nome} não tem fichas suficientes e está fora da rodada.');
         jogadoresAtivos--;
       }
+
+      // Avance para o próximo jogador na ordem circular
+      indiceJogadorAtual = (indiceJogadorAtual + 1) % jogadores.length;
     }
 
-    if (jogadoresAtivos <= 1) {
-      print('Fim da rodada de apostas. Pote atual: $pote fichas.');
-      print('A mão terminou em empate.');
-    } else {
-      print('Fim da rodada de apostas. Pote atual: $pote fichas.');
-    }
+    print('Fim da rodada de apostas. Pote atual: $pote fichas.');
+    rodadaAtual++; // Avance para a próxima rodada
   }
-
 
 
 
   void iniciarJogo() {
     baralho.embaralhar();
+    distribuirBlinds();
     distribuirHoleCards();
 
     // Pré-Flop
