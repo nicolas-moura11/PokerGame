@@ -1,50 +1,79 @@
-
-
-
-enum Acao { Desistir, Passar, Apostar, Pagar, Aumentar }
-
 class Carta {
-  final String naipe;
-  final String valor;
+  int value;
+  String suit;
+  String color;
 
-  Carta(this.naipe, this.valor);
+  Carta(this.value, this.suit) : color = _calculateColor(suit);
 
-  // Método para obter o valor numérico da carta
-  int valorCarta() {
-    switch (valor) {
-      case '2':
-        return 2;
-      case '3':
-        return 3;
-      case '4':
-        return 4;
-      case '5':
-        return 5;
-      case '6':
-        return 6;
-      case '7':
-        return 7;
-      case '8':
-        return 8;
-      case '9':
-        return 9;
-      case '10':
-        return 10;
-      case 'J':
-        return 11;
-      case 'Q':
-        return 12;
-      case 'K':
-        return 13;
-      case 'A':
-        return 14;
+  static String _calculateColor(String suit) {
+    if (suit == "Copas" || suit == "Ouros") {
+      return "Red";
+    } else if (suit == "Paus" || suit == "Espadas") {
+      return "Black";
+    } else {
+      return "Unknown";
+    }
+  }
+
+  int getValue()
+  {
+    return this.value;
+  }
+
+  String getSuit()
+  {
+    return this.suit;
+  }
+
+  String getColor()
+  {
+    return this.color;
+  }
+
+  String convertValueToName()
+  {
+    switch (this.value) {
+      case 1:
+        return "Ás";
+      case 2:
+        return "Dois";
+      case 3:
+        return "Três";
+      case 4:
+        return "Quatro";
+      case 5:
+        return "Cinco";
+      case 6:
+        return "Seis";
+      case 7:
+        return "Sete";
+      case 8:
+        return "Oito";
+      case 9:
+        return "Nove";
+      case 10:
+        return "Dez";
+      case 11:
+        return "Valete";
+      case 12:
+        return "Rainha";
+      case 13:
+        return "Rei";
+      case 14:
+        return "Ás";
       default:
-        throw Exception('Valor de carta inválido: $valor');
+        return "Valor não válido";
     }
   }
 
   @override
   String toString() {
-    return '$valor de $naipe';
+    return (convertValueToName() + " de ") + this.suit;
+  }
+
+  static void main(List<String> args)
+  {
+    Carta card = new Carta(1, "Copas");
+    print(card.toString());
   }
 }
