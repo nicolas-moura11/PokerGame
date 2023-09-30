@@ -1,837 +1,767 @@
-
+import 'Carta.dart';
+import 'Baralho.dart';
+import 'Jogador.dart';
 import 'dart:io';
-import 'dart:math';
-
-enum Acao { Desistir, Passar, Apostar, Pagar, Aumentar }
-
-class AvaliadorDeMao {
-  // ... (outras funções)
-
-  static bool ehRoyalFlush(List<Carta> mao) {
-    final naipeReferencia = mao[0].naipe;
-
-    if (mao.every((carta) =>
-    Carta.valorCarta(carta) == 'A' ||
-        Carta.valorCarta(carta) == 'K' ||
-        Carta.valorCarta(carta) == 'Q' ||
-        Carta.valorCarta(carta) == 'J' ||
-        Carta.valorCarta(carta) == '10') &&
-        mao.every((carta) => carta.naipe == naipeReferencia)) {
-      return true;
-    }
-    return false;
-  }
-
-  static bool ehStraightFlush(List<Carta> mao) {
-    final naipeReferencia = mao[0].naipe;
-
-    mao.sort((a, b) => Carta.valorCarta(a) - Carta.valorCarta(b));
-
-    if (mao.every((carta) => carta.naipe == naipeReferencia) &&
-        Carta.valorCarta(mao[0]) - Carta.valorCarta(mao[4]) == 4) {
-      return true;
-    }
-    return false;
-  }
-
-  static bool ehFourOfAKind(List<Carta> mao) {
-    for (int i = 0; i < mao.length - 3; i++) {
-      int count = 1;
-      for (int j = i + 1; j < mao.length; j++) {
-        if (Carta.valorCarta(mao[i]) == Carta.valorCarta(mao[j])) {
-          count++;
-        }
-      }
-      if (count == 4) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  static bool ehFullHouse(List<Carta> mao) {
-    bool possuiTrinca = false;
-    bool possuiPar = false;
-
-    for (int i = 0; i < mao.length - 2; i++) {
-      int count = 1;
-      for (int j = i + 1; j < mao.length; j++) {
-        if (Carta.valorCarta(mao[i]) == Carta.valorCarta(mao[j])) {
-          count++;
-        }
-      }
-      if (count == 3) {
-        possuiTrinca = true;
-      } else if (count == 2) {
-        possuiPar = true;
-      }
-    }
-
-    return possuiTrinca && possuiPar;
-  }
-
-  static bool ehFlush(List<Carta> mao) {
-    final naipeReferencia = mao[0].naipe;
-
-    if (mao.every((carta) => carta.naipe == naipeReferencia)) {
-      return true;
-    }
-    return false;
-  }
-
-  static bool ehStraight(List<Carta> mao) {
-    if (mao.length >= 5) {
-      mao.sort((a, b) => Carta.valorCarta(a) - Carta.valorCarta(b));
-
-      if (Carta.valorCarta(mao[4]) - Carta.valorCarta(mao[0]) == 4) {
-        if (Carta.valorCarta(mao[4]) == 14 || Carta.valorCarta(mao[0]) == 10) {
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-
-  static bool ehThreeOfAKind(List<Carta> mao) {
-    for (int i = 0; i < mao.length - 2; i++) {
-      int count = 1;
-      for (int j = i + 1; j < mao.length; j++) {
-        if (Carta.valorCarta(mao[i]) == Carta.valorCarta(mao[j])) {
-          count++;
-        }
-      }
-      if (count == 3) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  static bool ehTwoPair(List<Carta> mao) {
-    int paresEncontrados = 0;
-
-    for (int i = 0; i < mao.length - 1; i++) {
-      int count = 1;
-      for (int j = i + 1; j < mao.length; j++) {
-        if (Carta.valorCarta(mao[i]) == Carta.valorCarta(mao[j])) {
-          count++;
-        }
-      }
-      if (count == 2) {
-        paresEncontrados++;
-      }
-    }
-
-    return paresEncontrados == 2;
-  }
-
-  static bool ehPair(List<Carta> mao) {
-    for (int i = 0; i < mao.length - 1; i++) {
-      int count = 1;
-      for (int j = i + 1; j < mao.length; j++) {
-        if (Carta.valorCarta(mao[i]) == Carta.valorCarta(mao[j])) {
-          count++;
-        }
-      }
-      if (count == 2) {
-        return true;
-      }
-    }
-    return false;
-  }
-}
-
-class Carta {
-  final String naipe;
-  final String valor;
-
-  Carta(this.naipe, this.valor);
-
-  @override
-  String toString() {
-    return '$valor de $naipe';
-  }
-
-  static int valorCarta(Carta carta) {
-    final valores = {
-      '2': 2,
-      '3': 3,
-      '4': 4,
-      '5': 5,
-      '6': 6,
-      '7': 7,
-      '8': 8,
-      '9': 9,
-      '10': 10,
-      'J': 11,
-      'Q': 12,
-      'K': 13,
-      'A': 14,
-    };
-
-    return valores[carta.valor] ?? 0;
-  }
-}
-
-class Baralho {
-  final List<Carta> cartas = [];
-
-  Baralho() {
-    final naipes = ['Espadas', 'Copas', 'Ouros', 'Paus'];
-    final valores = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
-
-    for (var naipe in naipes) {
-      for (var valor in valores) {
-        cartas.add(Carta(naipe, valor));
-      }
-    }
-  }
-
-  void embaralhar() {
-    cartas.shuffle();
-  }
-
-  Carta distribuirCarta() {
-    if (cartas.isNotEmpty) {
-      return cartas.removeLast();
-    } else {
-      throw Exception('O baralho está vazio.');
-    }
-  }
-}
-
-
-class Jogador {
-  final String nome;
-  int fichas;
-  List<Carta> holeCards = [];
-
-  Jogador(this.nome, this.fichas);
-
-  void adicionarFichas(int quantidade) {
-    fichas += quantidade;
-  }
-
-  void adicionarCarta(Carta carta) {
-    holeCards.add(carta);
-  }
-
-  void mostrarHoleCards() {
-    print('$nome tem as seguintes cartas hole cards:');
-    for (var carta in holeCards) {
-      print(' - $carta');
-    }
-  }
-
-  void limparHoleCards() {
-    holeCards.clear();
-  }
-}
-
-class Mesa {
-  final List<Carta> cartasComunitarias = [];
-
-  void distribuirCartasComunitarias(Baralho baralho, int numCartas) {
-    for (int i = 0; i < numCartas; i++) {
-      final carta = baralho.distribuirCarta();
-      if (carta != null) {
-        cartasComunitarias.add(carta);
-      }
-    }
-  }
-
-  void mostrarCartasComunitarias() {
-    print('Cartas comunitárias:');
-    for (var carta in cartasComunitarias) {
-      print(' - $carta');
-    }
-  }
-
-  void limparCartasComunitarias() {
-    cartasComunitarias.clear();
-  }
-}
-
 
 class PokerGame {
-  List<Jogador> jogadores = [];
-  List<Carta> cartasComunitarias = [];
-  int pote = 0;
-  final Mesa mesa = Mesa();
-  final Baralho baralho = Baralho();
-  int smallBlind = 10; // Define o valor do small blind
-  int bigBlind = 20;   // Define o valor do big blind
-  int rodadaAtual = 0;
-  late Jogador dealer; // Adicione a variável dealer aqui
-  late Jogador bigblind;
-  late Jogador jogadorAtual; // Adicione a variável jogadorAtual aqui
+  late List<Jogador> JogadorList;
+  late Baralho gameDeck;
+  late List<Carta?> communityCards;
+  late int winningPot;
+  late int smallBlind;
+  late int bigBlind;
+  late Jogador dealer;
+  late Jogador JogadorSmallBlind;
+  late Jogador JogadorBigBlind;
+  late List<int?> JogadorsTotalBets;
+  late bool keepPlaying;
+  String next() {
+    return stdin.readLineSync() ?? '';
+  }
 
-  void menuPrincipal() {
-    bool jogarNovamente = true;
+  PokerGame(int smallBlind) {
+    JogadorList = [];
+    gameDeck = Baralho();
+    communityCards = List<Carta>.filled(5, Carta(0, ''));
+    winningPot = 0;
+    this.smallBlind = smallBlind;
+    this.bigBlind = smallBlind * 2;
+    keepPlaying = true;
+    dealer = Jogador(name: 'Dealer', balance: 0, holeCards: []);
+    JogadorBigBlind = Jogador(name: 'JogadorBigBlind', balance: 0, holeCards: []);
+    JogadorSmallBlind = Jogador(name: 'JogadorSmallBlind', balance: 0, holeCards: []);
 
-    while (jogarNovamente) {
-      print('-' * 30);
-      print('Bem-vindo ao Jogo de Poker!');
-      print('-' * 30);
-      print('Escolha uma opção:');
-      print('1. Iniciar Jogo');
-      print('2. Encerrar Jogo');
-      print('-' * 30);
-      print('Digite o número da opção desejada:');
-
-      String entrada = stdin.readLineSync() ?? '';
-
-      switch (entrada) {
-        case '1':
-          criarJogadores();
-          comprarFichas();
-          iniciarJogo();
-          break;
-        case '2':
-          jogarNovamente = false;
-          break;
-        default:
-          print('Opção inválida. Tente novamente.');
-          break;
+    JogadorSetup();
+    while (keepPlaying) {
+      bettingRound(true);
+      print("1");
+      dealNextCommunityCard();
+      print("2");
+      bettingRound(false);
+      print("3");
+      dealNextCommunityCard();
+      print("4");
+      bettingRound(false);
+      print("5");
+      dealNextCommunityCard();
+      print("6");
+      findWinner();
+      print("7");
+      rotateJogadorPositions();
+      print("Deseja jogar outra rodada? (Y/N)");
+      if (next().toLowerCase().contains("n")) {
+        keepPlaying = false;
       }
     }
-
-    print('-' * 30); // Linha horizontal para separação
-    print('Obrigado por jogar! Até a próxima.');
-  }
-
-  // Avalia uma mão de jogador e retorna sua categoria de mão
-  String avaliarMao(List<Carta> mao) {
-    mao.sort((a, b) => Carta.valorCarta(b).compareTo(Carta.valorCarta(a)));
-
-    // Verifique cada categoria de mão, começando pela mais alta
-    if (ehRoyalFlush(mao)) return 'Royal Flush';
-    if (ehStraightFlush(mao)) return 'Straight Flush';
-    if (ehFourOfAKind(mao)) return 'Four of a Kind';
-    if (ehFullHouse(mao)) return 'Full House';
-    if (ehFlush(mao)) return 'Flush';
-    if (ehStraight(mao)) return 'Straight';
-    if (ehThreeOfAKind(mao)) return 'Three of a Kind';
-    if (ehTwoPair(mao)) return 'Two Pair';
-    if (ehPair(mao)) return 'Pair';
-
-    return 'High Card'; // Se não se encaixar em nenhuma categoria, é uma "High Card"
-  }
-
-  // Implemente as funções de verificação para cada categoria de mão
-  bool ehRoyalFlush(List<Carta> mao) {
-    if (mao.isEmpty) {
-      return false; // A lista está vazia, não pode haver Royal Flush.
-    }
-
-    final naipeReferencia = mao[0].naipe;
-
-    if (mao.every((carta) =>
-    Carta.valorCarta(carta) == 'A' ||
-        Carta.valorCarta(carta) == 'K' ||
-        Carta.valorCarta(carta) == 'Q' ||
-        Carta.valorCarta(carta) == 'J' ||
-        Carta.valorCarta(carta) == '10') &&
-        mao.every((carta) => carta.naipe == naipeReferencia)) {
-      return true;
-    }
-    return false;
-  }
-
-  bool ehStraightFlush(List<Carta> mao) {
-    // Verifique se é um Straight Flush
-    // Straight Flush: Cinco cartas na sequência, do mesmo naipe
-    final naipeReferencia = mao[0].naipe;
-
-    mao.sort((a, b) => Carta.valorCarta(a) - Carta.valorCarta(b));
-
-    if (mao.every((carta) => carta.naipe == naipeReferencia) &&
-        Carta.valorCarta(mao[0]) - Carta.valorCarta(mao[4]) == 4) {
-      return true;
-    }
-    return false;
   }
 
 
 
-  bool ehFourOfAKind(List<Carta> mao) {
-    // Verifique se é um Four of a Kind (Quadra)
-    for (int i = 0; i < mao.length - 3; i++) {
-      int count = 1;
-      for (int j = i + 1; j < mao.length; j++) {
-        if (Carta.valorCarta(mao[i]) == Carta.valorCarta(mao[j])) {
-          count++;
-        }
-      }
-      if (count == 4) {
-        return true;
+  void JogadorSetup() {
+    bool addAnotherJogador = true;
+    while (addAnotherJogador) {
+      addAnotherJogador = false;
+      addJogador();
+      print("Deseja adicionar outro jogador? (Y/N)");
+      if (stdin.readLineSync()!.toLowerCase().contains("y")) {
+        addAnotherJogador = true;
       }
     }
-    return false;
-  }
-
-  bool ehFullHouse(List<Carta> mao) {
-    // Verifique se é um Full House
-    bool possuiTrinca = false;
-    bool possuiPar = false;
-
-    for (int i = 0; i < mao.length - 2; i++) {
-      int count = 1;
-      for (int j = i + 1; j < mao.length; j++) {
-        if (Carta.valorCarta(mao[i]) == Carta.valorCarta(mao[j])) {
-          count++;
-        }
-      }
-      if (count == 3) {
-        possuiTrinca = true;
-      } else if (count == 2) {
-        possuiPar = true;
-      }
+    this.dealer = JogadorList[0];
+    if (JogadorList.length > 2) {
+      this.JogadorSmallBlind = JogadorList[1];
+      this.JogadorBigBlind = JogadorList[2];
     }
-
-    return possuiTrinca && possuiPar;
-  }
-
-  bool ehFlush(List<Carta> mao) {
-    // Verifique se é um Flush
-    final naipeReferencia = mao[0].naipe;
-
-    if (mao.every((carta) => carta.naipe == naipeReferencia)) {
-      return true;
-    }
-    return false;
-  }
-
-  bool ehStraight(List<Carta> mao) {
-    // Verifique se é um Straight (Sequência)
-    if (mao.length >= 5) {
-      mao.sort((a, b) => Carta.valorCarta(a) - Carta.valorCarta(b));
-
-      if (Carta.valorCarta(mao[4]) - Carta.valorCarta(mao[0]) == 4) {
-        // As sequências podem ser A-2-3-4-5 ou 10-J-Q-K-A,
-        // portanto, verifique se o valor da carta mais alta é A ou 10
-        if (Carta.valorCarta(mao[4]) == 14 || Carta.valorCarta(mao[0]) == 10) {
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-
-  bool ehThreeOfAKind(List<Carta> mao) {
-    // Verifique se é um Three of a Kind (Trinca)
-    for (int i = 0; i < mao.length - 2; i++) {
-      int count = 1;
-      for (int j = i + 1; j < mao.length; j++) {
-        if (Carta.valorCarta(mao[i]) == Carta.valorCarta(mao[j])) {
-          count++;
-        }
-      }
-      if (count == 3) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  bool ehTwoPair(List<Carta> mao) {
-    // Verifique se é um Two Pair (Dois Pares)
-    int paresEncontrados = 0;
-
-    for (int i = 0; i < mao.length - 1; i++) {
-      int count = 1;
-      for (int j = i + 1; j < mao.length; j++) {
-        if (Carta.valorCarta(mao[i]) == Carta.valorCarta(mao[j])) {
-          count++;
-        }
-      }
-      if (count == 2) {
-        paresEncontrados++;
-      }
-    }
-
-    return paresEncontrados == 2;
-  }
-
-  bool ehPair(List<Carta> mao) {
-    // Verifique se é um Pair (Par)
-    for (int i = 0; i < mao.length - 1; i++) {
-      int count = 1;
-      for (int j = i + 1; j < mao.length; j++) {
-        if (Carta.valorCarta(mao[i]) == Carta.valorCarta(mao[j])) {
-          count++;
-        }
-      }
-      if (count == 2) {
-        return true;
-      }
-    }
-    return false;
+    this.JogadorsTotalBets = List<int>.filled(JogadorList.length, 0);
+    payOutBlinds();
   }
 
 
 
-  // Função para determinar o vencedor com base nas categorias das mãos
-  Jogador determinarVencedor(List<Jogador> jogadores) {
-    Jogador vencedor = jogadores[0];
-    String categoriaVencedor = avaliarMao(vencedor.holeCards);
-
-    for (var jogador in jogadores) {
-      String categoriaAtual = avaliarMao(jogador.holeCards);
-
-      // Compare as categorias das mãos
-      int resultadoComparacao = compararCategorias(categoriaAtual, categoriaVencedor);
-
-      if (resultadoComparacao > 0) {
-        // A categoria atual é melhor
-        vencedor = jogador;
-        categoriaVencedor = categoriaAtual;
-      } else if (resultadoComparacao == 0) {
-        // Empate na categoria, compare as cartas mais altas
-        int resultadoComparacaoCartas = compararMao(jogador.holeCards, vencedor.holeCards);
-        if (resultadoComparacaoCartas > 0) {
-          vencedor = jogador;
-        }
-      }
-    }
-
-    return vencedor;
-  }
-
-// Função para comparar duas categorias de mão
-// Retorna um valor positivo se categoriaA for melhor, negativo se categoriaB for melhor, ou zero se forem iguais
-  int compararCategorias(String categoriaA, String categoriaB) {
-    final ordemCategorias = [
-      'Royal Flush',
-      'Straight Flush',
-      'Four of a Kind',
-      'Full House',
-      'Flush',
-      'Straight',
-      'Three of a Kind',
-      'Two Pair',
-      'Pair',
-      'High Card',
-    ];
-
-    int indiceA = ordemCategorias.indexOf(categoriaA);
-    int indiceB = ordemCategorias.indexOf(categoriaB);
-
-    return indiceA - indiceB;
-  }
-
-// Função para comparar duas mãos da mesma categoria
-// Retorna um valor positivo se maoA for melhor, negativo se maoB for melhor, ou zero se forem iguais
-  int compararMao(List<Carta> maoA, List<Carta> maoB) {
-    // Ordene as mãos em ordem decrescente de valor das cartas
-    maoA.sort((a, b) => Carta.valorCarta(b).compareTo(Carta.valorCarta(a)));
-    maoB.sort((a, b) => Carta.valorCarta(b).compareTo(Carta.valorCarta(a)));
-
-    for (int i = 0; i < maoA.length; i++) {
-      int valorCartaA = Carta.valorCarta(maoA[i]);
-      int valorCartaB = Carta.valorCarta(maoB[i]);
-
-      if (valorCartaA > valorCartaB) {
-        return 1; // maoA é melhor
-      } else if (valorCartaA < valorCartaB) {
-        return -1; // maoB é melhor
-      }
-    }
-
-    return 0; // Empate
-  }
-
-
-  // Método para determinar o dealer no início do jogo
-  void determinarDealer() {
-    // Embaralhe a lista de jogadores
-    jogadores.shuffle();
-    dealer = jogadores[0]; // O primeiro jogador na lista é o dealer
-    jogadorAtual = dealer; // Comece com o dealer como jogador atual
-  }
-
-  // Método para avançar para o próximo jogador na rodada
-  void proximoJogador() {
-    int indiceJogadorAtual = jogadores.indexOf(jogadorAtual);
-    if (indiceJogadorAtual == jogadores.length - 1) {
-      // Voltou ao dealer, encerrando a rodada
-      rodadaAtual++;
-      // Reinicie a ação com o dealer
-      jogadorAtual = dealer;
+  void rotateJogadorPositions() {
+    int dealerIndex = this.JogadorList.indexOf(this.dealer);
+    int smallBlindIndex = this.JogadorList.indexOf(this.JogadorSmallBlind);
+    int bigBlindIndex = this.JogadorList.indexOf(this.JogadorBigBlind);
+    if (dealerIndex < (this.JogadorList.length - 1)) {
+      this.dealer = this.JogadorList[dealerIndex + 1];
     } else {
-      // Avance para o próximo jogador na lista
-      jogadorAtual = jogadores[indiceJogadorAtual + 1];
+      this.dealer = this.JogadorList[0];
+    }
+    if (smallBlindIndex < (this.JogadorList.length - 1)) {
+      this.JogadorSmallBlind = this.JogadorList[smallBlindIndex + 1];
+    } else {
+      this.JogadorSmallBlind = this.JogadorList[0];
+    }
+    if (bigBlindIndex < (this.JogadorList.length - 1)) {
+      this.JogadorBigBlind = this.JogadorList[bigBlindIndex + 1];
+    } else {
+      this.JogadorBigBlind = this.JogadorList[0];
     }
   }
 
-  void criarJogadores() {
-    print('Quantos jogadores deseja adicionar?');
-    int quantidadeJogadores = int.parse(stdin.readLineSync() ?? '0');
 
-    for (int i = 1; i <= quantidadeJogadores; i++) {
-      print('Nome do Jogador $i:');
-      String nome = stdin.readLineSync() ?? '';
-      jogadores.add(Jogador(nome, 0));
+  void payOutBlinds()
+  {
+    if (this.JogadorList.length > 2) {
+      this.JogadorSmallBlind.reduceFromBalance(this.smallBlind);
+      this.JogadorsTotalBets[this.JogadorList.indexOf(JogadorSmallBlind)] = this.smallBlind;
+      this.JogadorBigBlind.reduceFromBalance(this.bigBlind);
+      this.JogadorsTotalBets[this.JogadorList.indexOf(this.JogadorBigBlind)] = this.bigBlind;
     }
   }
 
-  void comprarFichas() {
-    print('Quantas fichas cada jogador deseja comprar?');
-    int quantidadeFichas = int.parse(stdin.readLineSync() ?? '0');
+  void addJogador() {
+    stdout.write("Entre com o nome do jogador ");
+    String tempName = stdin.readLineSync()!;
 
-    for (var jogador in jogadores) {
-      jogador.adicionarFichas(quantidadeFichas);
+    stdout.write("Saldo inicial de $tempName  ");
+    int tempBalance = int.parse(stdin.readLineSync()!);
+
+    List<Carta> tempHoleCards = [gameDeck.getNextCard(), gameDeck.getNextCard()];
+
+    JogadorList.add(Jogador(name: tempName, balance: tempBalance, holeCards: tempHoleCards));
+    print(JogadorList[JogadorList.length - 1].toString());
+  }
+
+  void bettingRound(bool isPreFlop)
+  {
+    int startingJogadorIndex;
+    if (isPreFlop) {
+      startingJogadorIndex = (this.JogadorList.indexOf(this.JogadorSmallBlind) + 2);
+    } else {
+      startingJogadorIndex = this.JogadorList.indexOf(this.JogadorSmallBlind);
+    }
+    int currentJogadorIndex = startingJogadorIndex;
+    for (int i = 0; i < this.JogadorList.length; i++) {
+      if (this.JogadorList[currentJogadorIndex].getIsInGame()) {
+        currentJogadorIndex = individualBet(currentJogadorIndex);
+      }
+      currentJogadorIndex = (currentJogadorIndex + 1) % this.JogadorList.length; // Avança para o próximo jogador
+    }
+    while (!areAllBetsEqual()) {
+      currentJogadorIndex = individualBet(currentJogadorIndex);
     }
   }
 
-  void distribuirHoleCards() {
-    for (var jogador in jogadores) {
-      jogador.adicionarCarta(baralho.distribuirCarta());
-      jogador.adicionarCarta(baralho.distribuirCarta());
-    }
-  }
 
-  int fazerAposta(Jogador jogador) {
-    print('${jogador.nome}, é a sua vez de apostar.');
-
-    int fichasApostadas = 0;
-    bool apostaValida = false;
-
-    while (!apostaValida) {
-      print('Quantas fichas você deseja apostar? (0 para passar)');
-      String entrada = stdin.readLineSync() ?? '';
-      fichasApostadas = int.tryParse(entrada) ?? 0;
-
-      if (fichasApostadas >= 0 && fichasApostadas <= jogador.fichas) {
-        apostaValida = true;
+  int individualBet(int currentJogadorIndex)
+  {
+    String checkOrCall = (areAllBetsEqual() ? "check" : "call");
+    printCommunityCards();
+    print("O Pote é: ${this.winningPot}");
+    print("${this.JogadorList[currentJogadorIndex].toString()}\nVocê deseja realizar fold, $checkOrCall, ou raise?");
+    String answer = stdin.readLineSync()!;
+    if (answer.toLowerCase().contains("fold")) {
+      fold(this.JogadorList[currentJogadorIndex]);
+    } else {
+      if (answer.toLowerCase().contains("call")) {
+        call(this.JogadorList[currentJogadorIndex]);
       } else {
-        print('Aposta inválida. Tente novamente.');
+        if (answer.toLowerCase().contains("raise")) {
+          raise(this.JogadorList[currentJogadorIndex]);
+        }
       }
     }
-
-    jogador.fichas -= fichasApostadas;
-    pote += fichasApostadas;
-
-    return fichasApostadas;
+    currentJogadorIndex++;
+    if (currentJogadorIndex == this.JogadorList.length) {
+      currentJogadorIndex = 0;
+    }
+    return currentJogadorIndex;
   }
 
-  Acao tomarAcao(Jogador jogador, int apostaMinima) {
-    jogador.mostrarHoleCards();
 
-    print('Ações disponíveis:');
-    print('1. Desistir');
-    print('2. Passar');
-    print('3. Apostar');
-    print('4. Pagar');
-    print('5. Aumentar');
-    print('Digite o número da ação desejada:');
+  bool areAllBetsEqual()
+  {
+    int highestBet = getHighestBet();
+    for (int j = 0; j < this.JogadorsTotalBets.length; j++) {
+      if ((this.JogadorsTotalBets[j] ?? 0) < highestBet && this.JogadorList[j].getIsInGame()) {
+        return false;
+      }
+    }
+    return true;
+  }
 
-    String entrada = stdin.readLineSync() ?? '';
 
-    switch (entrada) {
-      case '1':
-        return Acao.Desistir;
-      case '2':
-        return Acao.Passar;
-      case '3':
-        if (jogador.fichas == 0) {
-          print('Você não tem fichas para apostar.');
-          return tomarAcao(jogador, apostaMinima);
-        }
-        return Acao.Apostar;
-      case '4':
-        if (jogador.fichas < apostaMinima) {
-          print('Você não tem fichas suficientes para pagar a aposta.');
-          return tomarAcao(jogador, apostaMinima);
-        }
-        return Acao.Pagar;
-      case '5':
-        if (jogador.fichas == 0) {
-          print('Você não tem fichas para aumentar a aposta.');
-          return tomarAcao(jogador, apostaMinima);
-        }
-        return Acao.Aumentar;
-      default:
-        print('Opção inválida. Tente novamente.');
-        return tomarAcao(jogador, apostaMinima);
+
+  int getHighestBet()
+  {
+    int highestBet = 0;
+    for (int i = 0; i < this.JogadorsTotalBets.length; i++) {
+      int currentBet = this.JogadorsTotalBets[i] ?? 0;
+      if ((currentBet > highestBet) && this.JogadorList[i].getIsInGame()) {
+        highestBet = currentBet;
+      }
+    }
+    return highestBet;
+  }
+
+
+
+  void fold(Jogador Jogador)
+  {
+    Jogador.setIsInGame(false);
+  }
+
+  void call(Jogador Jogador)
+  {
+    int highestBet = getHighestBet();
+    int JogadorIndex = this.JogadorList.indexOf(Jogador);
+
+    if (JogadorIndex >= 0) {
+      int JogadorsBetDifference = highestBet - (this.JogadorsTotalBets[JogadorIndex] ?? 0);
+      Jogador.reduceFromBalance(JogadorsBetDifference);
+      this.JogadorsTotalBets[JogadorIndex] = (this.JogadorsTotalBets[JogadorIndex] ?? 0) + JogadorsBetDifference;
+      updateWinningPot();
     }
   }
 
-  void distribuirBlinds() {
-    print('Distribuindo blinds...');
 
-    // Determine a ordem dos jogadores para distribuir os blinds
-    int indexOfSmallBlind = (rodadaAtual % jogadores.length);
-    int indexOfBigBlind = (rodadaAtual + 1) % jogadores.length;
-
-    // Defina o small blind e o big blind para os jogadores
-    jogadores[indexOfSmallBlind].fichas -= smallBlind;
-    jogadores[indexOfBigBlind].fichas -= bigBlind;
-    pote += smallBlind + bigBlind;
-
-    // Exiba na tela que o jogador fez as apostas de small blind e big blind
-    print('${jogadores[indexOfSmallBlind].nome} fez a aposta do Small Blind de $smallBlind fichas.');
-    print('${jogadores[indexOfBigBlind].nome} fez a aposta do Big Blind de $bigBlind fichas.');
+  void raise(Jogador Jogador)
+  {
+    stdout.write('${Jogador.getName()}: Quanto você quer aumentar');
+    int raiseAmount = int.parse(stdin.readLineSync()!);
+    call(Jogador);
+    Jogador.reduceFromBalance(raiseAmount);
+    this.JogadorsTotalBets[this.JogadorList.indexOf(Jogador)] = (this.JogadorsTotalBets[this.JogadorList.indexOf(Jogador)] ?? 0) + raiseAmount;
+    updateWinningPot();
   }
 
-  void rodadaDeApostas() {
-    print('Iniciando rodada de apostas...');
-    int apostaMinima = bigBlind; // A aposta mínima na primeira rodada é o big blind
-    int jogadoresAtivos = jogadores.length;
 
-    // Determine o índice do jogador que começa a rodada de apostas
-    int indiceJogadorAtual = (rodadaAtual + 2) % jogadores.length;
+  void updateWinningPot()
+  {
+    this.winningPot = 0;
+    for (int i = 0; i < this.JogadorsTotalBets.length; i++) {
+      this.winningPot += this.JogadorsTotalBets[i] ?? 0;
+    }
+  }
 
-    // Continue enquanto houver mais de um jogador ativo
-    while (jogadoresAtivos > 1) {
-      Jogador jogadorAtual = jogadores[indiceJogadorAtual];
 
-      if (jogadorAtual.fichas > 0) {
-        Acao acao = tomarAcao(jogadorAtual, apostaMinima);
-
-        switch (acao) {
-          case Acao.Desistir:
-            print('${jogadorAtual.nome} desistiu da rodada.');
-            jogadoresAtivos--;
-            break;
-          case Acao.Passar:
-            print('${jogadorAtual.nome} passou.');
-            jogadoresAtivos--;
-            break;
-          case Acao.Apostar:
-            print('${jogadorAtual.nome} está fazendo uma aposta.');
-            int fichasApostadas = fazerAposta(jogadorAtual);
-            apostaMinima = max(apostaMinima, fichasApostadas);
-            break;
-          case Acao.Pagar:
-            print('${jogadorAtual.nome} está pagando a aposta anterior.');
-            int fichasApostadas = fazerAposta(jogadorAtual);
-            break;
-          case Acao.Aumentar:
-            print('${jogadorAtual.nome} está aumentando a aposta.');
-            int fichasApostadas = fazerAposta(jogadorAtual);
-            apostaMinima = max(apostaMinima, fichasApostadas);
-            break;
-        }
+  void dealNextCommunityCard()
+  {
+    if (this.communityCards[0] == null) {
+      this.communityCards[0] = this.gameDeck.getNextCard();
+      this.communityCards[1] = this.gameDeck.getNextCard();
+      this.communityCards[2] = this.gameDeck.getNextCard();
+    } else {
+      if (this.communityCards[3] == null) {
+        this.communityCards[3] = this.gameDeck.getNextCard();
       } else {
-        print('${jogadorAtual.nome} não tem fichas suficientes e está fora da rodada.');
-        jogadoresAtivos--;
-      }
-
-      // Avance para o próximo jogador na ordem circular
-      indiceJogadorAtual = (indiceJogadorAtual + 1) % jogadores.length;
-    }
-
-    print('Fim da rodada de apostas. Pote atual: $pote fichas.');
-    rodadaAtual++; // Avance para a próxima rodada
-  }
-
-
-
-  void iniciarJogo() {
-    baralho.embaralhar();
-    distribuirBlinds();
-    distribuirHoleCards();
-
-    // Pré-Flop
-    rodadaDeApostas();
-
-    // Flop
-    revelarFlop();
-    rodadaDeApostas();
-
-    // Turn
-    revelarTurn();
-    rodadaDeApostas();
-
-    // River
-    revelarRiver();
-    rodadaDeApostas();
-
-    // Showdown (Determinar o vencedor da mão)
-    encerrarMao();
-
-    // Perguntar se os jogadores desejam continuar jogando
-    print('Deseja continuar jogando? (S para Sim, qualquer outra tecla para sair)');
-    String continuar = stdin.readLineSync()?.toUpperCase() ?? '';
-
-    if (continuar == 'S') {
-      iniciarJogo(); // Recomeçar o jogo
-    } else {
-      encerrarJogo();
-    }
-  }
-
-
-
-
-  void revelarFlop() {
-    print('Revelando o Flop (3 cartas comunitárias)...');
-    mesa.distribuirCartasComunitarias(baralho, 3);
-    mesa.mostrarCartasComunitarias();
-  }
-
-  void revelarTurn() {
-    print('Revelando o Turn (1 carta comunitária)...');
-    mesa.distribuirCartasComunitarias(baralho, 1);
-    mesa.mostrarCartasComunitarias();
-  }
-
-  void revelarRiver() {
-    print('Revelando o River (1 carta comunitária)...');
-    mesa.distribuirCartasComunitarias(baralho, 1);
-    mesa.mostrarCartasComunitarias();
-  }
-
-  void encerrarMao() {
-    print('Encerrando a mão...');
-
-    // Determinar o vencedor da mão
-    Jogador vencedorDaMao = determinarVencedor(jogadores);
-    print('Vencedor da mão: ${vencedorDaMao.nome}');
-
-    // Distribuir o pote para o vencedor
-    vencedorDaMao.adicionarFichas(pote);
-    pote = 0;
-
-    // Limpar as cartas dos jogadores e da mesa para a próxima mão
-    for (var jogador in jogadores) {
-      jogador.limparHoleCards();
-    }
-    mesa.limparCartasComunitarias();
-
-    // Embaralhar o baralho para a próxima mão
-    baralho.embaralhar();
-  }
-
-
-  void encerrarJogo() {
-    print('Encerrando o jogo...');
-
-    // Implemente ações para encerrar o jogo
-    bool houveEmpate = false;
-    Jogador vencedorGeral = jogadores[0]; // Inicialize com o primeiro jogador
-
-    for (var jogador in jogadores) {
-      if (jogador.fichas > vencedorGeral.fichas) {
-        vencedorGeral = jogador;
-        houveEmpate = false; // Se encontramos um novo líder, redefina a flag de empate
-      } else if (jogador.fichas == vencedorGeral.fichas) {
-        houveEmpate = true; // Houve um empate
+        if (this.communityCards[4] == null) {
+          this.communityCards[4] = this.gameDeck.getNextCard();
+        }
       }
     }
+  }
 
-    if (houveEmpate) {
-      print('O jogo terminou em empate.');
+  void printCommunityCards()
+  {
+    print("-----------------------------------------------------");
+    if (((this.communityCards[0] != null) && (this.communityCards[3] == null)) && (this.communityCards[4] == null)) {
+      print("Flop:");
     } else {
-      print('O vencedor geral do jogo é: ${vencedorGeral.nome}');
+      if ((this.communityCards[3] != null) && (this.communityCards[4] == null)) {
+        print("Turn:");
+      } else {
+        if (this.communityCards[4] != null) {
+          print("River:");
+        }
+      }
+    }
+    print(this.communityCards.toString());
+    print("-----------------------------------------------------");
+  }
+
+
+  void findWinner()
+  {
+    List<Jogador> winningJogadors = [];
+    winningJogadors = royalFlush();
+    if (winningJogadors.length > 0) {
+      handleWinners(winningJogadors);
+      return;
+    }
+    winningJogadors = straightFlush();
+    if (winningJogadors.length > 0) {
+      handleWinners(winningJogadors);
+      return;
+    }
+    winningJogadors = fourOfAKind();
+    if (winningJogadors.length > 0) {
+      handleWinners(winningJogadors);
+      return;
+    }
+    winningJogadors = fullHouse();
+    if (winningJogadors.length > 0) {
+      handleWinners(winningJogadors);
+      return;
+    }
+    winningJogadors = flush();
+    if (winningJogadors.length > 0) {
+      handleWinners(winningJogadors);
+      return;
+    }
+    winningJogadors = straight();
+    if (winningJogadors.length > 0) {
+      handleWinners(winningJogadors);
+      return;
+    }
+    winningJogadors = threeOfAKind();
+    if (winningJogadors.length > 0) {
+      handleWinners(winningJogadors);
+      return;
+    }
+    winningJogadors = twoPair();
+    if (winningJogadors.length > 0) {
+      handleWinners(winningJogadors);
+      return;
+    }
+    winningJogadors = onePair();
+    if (winningJogadors.length > 0) {
+      handleWinners(winningJogadors);
+      return;
+    }
+    winningJogadors = highCard();
+    if (winningJogadors.length > 0) {
+      handleWinners(winningJogadors);
+      return;
+    }
+    print("Vencedor(es) é: " + winningJogadors.map((Jogador) => Jogador.toString()).join(", "));
+
+  }
+
+
+
+  void handleWinners(List<Jogador> winningJogadors)
+  {
+    int tempWinnerAward = (this.winningPot ~/ winningJogadors.length);
+    for (int i = 0; i < winningJogadors.length; i++) {
+      winningJogadors[i].addToBalance(tempWinnerAward);
+    }
+    this.winningPot = 0;
+  }
+
+  List<Carta?> tempJogadorsCardsAll(Jogador Jogador)
+  {
+    List<Carta?> result = [];
+
+    for (int i = 0; i < this.communityCards.length; i++) {
+      result.add(this.communityCards[i]);
     }
 
-    print('Obrigado por jogar! Até a próxima.');
+    result.add(Jogador.getHoleCards()[0]);
+    result.add(Jogador.getHoleCards()[1]);
+
+    return result;
   }
+
+  List<Jogador> royalFlush()
+  {
+    List<Jogador> winningJogadors = [];
+    for (int i = 0; i < this.JogadorList.length; i++) {
+      int hearts = 0;
+      int diamonds = 0;
+      int spades = 0;
+      int clubs = 0;
+      Jogador tempJogador = this.JogadorList[i];
+      if (tempJogador.getIsInGame()) {
+        List<int> tempJogadorCards = [];
+        List<Carta?> tempCardsAll = tempJogadorsCardsAll(tempJogador);
+        for (int l = 0; l < tempCardsAll.length; l++) {
+          if (tempCardsAll[l] != null) {
+            if (tempCardsAll[l]!.getSuit().contains("Copas")) {
+              hearts++;
+            }
+            if (tempCardsAll[l]!.getSuit().contains("Ouros")) {
+              diamonds++;
+            }
+            if (tempCardsAll[l]!.getSuit().contains("Espadas")) {
+              spades++;
+            }
+            if (tempCardsAll[l]!.getSuit().contains("Paus")) {
+              clubs++;
+            }
+          }
+        }
+        if (hearts >= 5) {
+          tempJogadorCards = getValuesOfSuit(tempCardsAll, "Copas");
+        } else if (diamonds >= 5) {
+          tempJogadorCards = getValuesOfSuit(tempCardsAll, "Ouros");
+        } else if (spades >= 5) {
+          tempJogadorCards = getValuesOfSuit(tempCardsAll, "Espadas");
+        } else if (clubs >= 5) {
+          tempJogadorCards = getValuesOfSuit(tempCardsAll, "Paus");
+        }
+
+        if (tempJogadorCards.contains(10) && tempJogadorCards.contains(11) && tempJogadorCards.contains(12) && tempJogadorCards.contains(13) && tempJogadorCards.contains(14)) {
+          winningJogadors.add(tempJogador);
+        }
+      }
+    }
+    return winningJogadors;
+  }
+
+
+
+
+  List<Jogador> straightFlush()
+  {
+    List<Jogador> winningJogadors = [];
+    for (int i = 0; i < this.JogadorList.length; i++) {
+      int hearts = 0;
+      int diamonds = 0;
+      int spades = 0;
+      int clubs = 0;
+      Jogador tempJogador = this.JogadorList[i];
+      if (tempJogador.getIsInGame()) {
+        List<int> tempJogadorCards = [];
+        List<Carta?> tempCardsAll = tempJogadorsCardsAll(tempJogador);
+        for (int l = 0; l < tempCardsAll.length; l++) {
+          if (tempCardsAll[l] != null) {
+            if (tempCardsAll[l]!.getSuit().contains("Copas")) {
+              hearts++;
+            }
+            if (tempCardsAll[l]!.getSuit().contains("Ouros")) {
+              diamonds++;
+            }
+            if (tempCardsAll[l]!.getSuit().contains("Espadas")) {
+              spades++;
+            }
+            if (tempCardsAll[l]!.getSuit().contains("Paus")) {
+              clubs++;
+            }
+          }
+        }
+        if (hearts >= 5) {
+          tempJogadorCards = getValuesOfSuit(tempJogadorsCardsAll as List<Carta>, "Copas");
+        } else if (diamonds >= 5) {
+          tempJogadorCards = getValuesOfSuit(tempJogadorsCardsAll as List<Carta>, "Ouros");
+        } else if (spades >= 5) {
+          tempJogadorCards = getValuesOfSuit(tempJogadorsCardsAll as List<Carta>, "Espadas");
+        } else if (clubs >= 5) {
+          tempJogadorCards = getValuesOfSuit(tempJogadorsCardsAll as List<Carta>, "Paus");
+        }
+
+        tempJogadorCards.sort();
+        int lowestValue = 15;
+        int secondHighestValue = 15;
+        int thirdHighestValue = 15;
+        if (tempJogadorCards.length >= 5) {
+          lowestValue = tempJogadorCards[0];
+          secondHighestValue = tempJogadorCards[1];
+          thirdHighestValue = tempJogadorCards[2];
+          if (((tempJogadorCards.contains(lowestValue + 1) && tempJogadorCards.contains(lowestValue + 2)) && tempJogadorCards.contains(lowestValue + 3)) && tempJogadorCards.contains(lowestValue + 4)) {
+            winningJogadors.add(tempJogador);
+          }
+        }
+        if (tempJogadorCards.length >= 6) {
+          if (((tempJogadorCards.contains(secondHighestValue + 1) && tempJogadorCards.contains(secondHighestValue + 2)) && tempJogadorCards.contains(secondHighestValue + 3)) && tempJogadorCards.contains(secondHighestValue + 4)) {
+            winningJogadors.add(tempJogador);
+          }
+        }
+        if (tempJogadorCards.length >= 7) {
+          if (((tempJogadorCards.contains(thirdHighestValue + 1) && tempJogadorCards.contains(thirdHighestValue + 2)) && tempJogadorCards.contains(thirdHighestValue + 3)) && tempJogadorCards.contains(thirdHighestValue + 4)) {
+            winningJogadors.add(tempJogador);
+          }
+        }
+      }
+    }
+    return winningJogadors;
+  }
+
+
+  List<Jogador> fourOfAKind()
+  {
+    List<Jogador> winningJogadors = [];
+    for (int i = 0; i < this.JogadorList.length; i++) {
+      Jogador tempJogador = this.JogadorList[i];
+      if (tempJogador.getIsInGame()) {
+        List<int> allValues = List<int>.filled(13, 0);
+        List<Carta?> tempCardsAll = tempJogadorsCardsAll(tempJogador);
+        for (int j = 0; j < tempCardsAll.length; j++) {
+          if (tempCardsAll[j] != null) {
+            allValues[tempCardsAll[j]!.getValue() - 2]++;
+          }
+        }
+        for (int k = 0; k < allValues.length; k++) {
+          if (allValues[k] >= 4) {
+            winningJogadors.add(tempJogador);
+          }
+        }
+      }
+    }
+    return winningJogadors;
+  }
+
+  List<Jogador> fullHouse()
+  {
+    List<Jogador> winningJogadors = [];
+    for (int i = 0; i < this.JogadorList.length; i++) {
+      Jogador tempJogador = this.JogadorList[i];
+      if (tempJogador.getIsInGame()) {
+        List<int> allValues = List<int>.filled(13, 0);
+        bool threeCard = false;
+        bool twoCard = false;
+        List<Carta?> tempCardsAll = tempJogadorsCardsAll(tempJogador);
+        for (int j = 0; j < tempCardsAll.length; j++) {
+          if (tempCardsAll[j] != null) {
+            allValues[tempCardsAll[j]!.getValue() - 2]++;
+          }
+        }
+        for (int k = 0; k < allValues.length; k++) {
+          if (allValues[k] >= 3) {
+            threeCard = true;
+          } else {
+            if (allValues[k] >= 2) {
+              twoCard = true;
+            }
+          }
+        }
+        if (threeCard && twoCard) {
+          winningJogadors.add(tempJogador);
+        }
+      }
+    }
+    return winningJogadors;
+  }
+
+
+  List<Jogador> flush()
+  {
+    List<Jogador> winningJogadors = [];
+    for (int i = 0; i < this.JogadorList.length; i++) {
+      int hearts = 0;
+      int diamonds = 0;
+      int spades = 0;
+      int clubs = 0;
+      Jogador tempJogador = this.JogadorList[i];
+      if (tempJogador.getIsInGame()) {
+        List<Carta?> tempCardsAll = tempJogadorsCardsAll(tempJogador);
+        for (int l = 0; l < tempCardsAll.length; l++) {
+          if (tempCardsAll[l] != null) {
+            if (tempCardsAll[l]!.getSuit().contains("Copas")) {
+              hearts++;
+            }
+            if (tempCardsAll[l]!.getSuit().contains("Ouros")) {
+              diamonds++;
+            }
+            if (tempCardsAll[l]!.getSuit().contains("Espadas")) {
+              spades++;
+            }
+            if (tempCardsAll[l]!.getSuit().contains("Paus")) {
+              clubs++;
+            }
+          }
+        }
+        if (hearts >= 5 || diamonds >= 5 || spades >= 5 || clubs >= 5) {
+          winningJogadors.add(tempJogador);
+        }
+      }
+    }
+    return winningJogadors;
+  }
+
+
+  List<Jogador> straight()
+  {
+    List<Jogador> winningJogadors = [];
+    for (int i = 0; i < this.JogadorList.length; i++) {
+      Jogador tempJogador = this.JogadorList[i];
+      if (tempJogador.getIsInGame()) {
+        List<Carta?> tempCardsAll = tempJogadorsCardsAll(tempJogador);
+        List<int> tempJogadorCards = getValuesOfAllCards(tempJogadorsCardsAll as List<Carta?>);
+        tempJogadorCards.sort();
+        int lowestValue = 15;
+        int secondHighestValue = 15;
+        int thirdHighestValue = 15;
+        if (tempJogadorCards.length >= 5) {
+          lowestValue = tempJogadorCards[0];
+          secondHighestValue = tempJogadorCards[1];
+          thirdHighestValue = tempJogadorCards[2];
+          if (tempJogadorCards.contains(lowestValue + 1) &&
+              tempJogadorCards.contains(lowestValue + 2) &&
+              tempJogadorCards.contains(lowestValue + 3) &&
+              tempJogadorCards.contains(lowestValue + 4)) {
+            winningJogadors.add(tempJogador);
+          }
+        }
+        if (tempJogadorCards.length >= 6) {
+          if (tempJogadorCards.contains(secondHighestValue + 1) &&
+              tempJogadorCards.contains(secondHighestValue + 2) &&
+              tempJogadorCards.contains(secondHighestValue + 3) &&
+              tempJogadorCards.contains(secondHighestValue + 4)) {
+            winningJogadors.add(tempJogador);
+          }
+        }
+        if (tempJogadorCards.length >= 7) {
+          if (tempJogadorCards.contains(thirdHighestValue + 1) &&
+              tempJogadorCards.contains(thirdHighestValue + 2) &&
+              tempJogadorCards.contains(thirdHighestValue + 3) &&
+              tempJogadorCards.contains(thirdHighestValue + 4)) {
+            winningJogadors.add(tempJogador);
+          }
+        }
+      }
+    }
+    return winningJogadors;
+  }
+
+
+  List<Jogador> threeOfAKind()
+  {
+    List<Jogador> winningJogadors = [];
+    for (int i = 0; i < this.JogadorList.length; i++) {
+      Jogador tempJogador = this.JogadorList[i];
+      if (tempJogador.getIsInGame()) {
+        List<int> allValues = List<int>.filled(13, 0);
+        List<Carta?> tempCardsAll = tempJogadorsCardsAll(tempJogador);
+        for (int j = 0; j < tempCardsAll.length; j++) {
+          int cardValue = tempCardsAll[j]!.getValue();
+          allValues[cardValue - 2]++;
+        }
+        for (int k = 0; k < allValues.length; k++) {
+          if (allValues[k] >= 3) {
+            winningJogadors.add(tempJogador);
+          }
+        }
+      }
+    }
+    return winningJogadors;
+  }
+
+
+  List<Jogador> twoPair()
+  {
+    List<Jogador> winningJogadors = [];
+    for (int i = 0; i < this.JogadorList.length; i++) {
+      Jogador tempJogador = this.JogadorList[i];
+      if (tempJogador.getIsInGame()) {
+        List<int> allValues = List<int>.filled(13, 0);
+        int pairCount = 0;
+        List<Carta?> tempCardsAll = tempJogadorsCardsAll(tempJogador);
+        for (int j = 0; j < tempCardsAll.length; j++) {
+          int cardValue = tempCardsAll[j]!.getValue();
+          allValues[cardValue - 2]++;
+        }
+        for (int k = 0; k < allValues.length; k++) {
+          if (allValues[k] >= 2) {
+            pairCount++;
+          }
+        }
+        if (pairCount >= 2) {
+          winningJogadors.add(tempJogador);
+        }
+      }
+    }
+    return winningJogadors;
+  }
+
+
+  List<Jogador> onePair()
+  {
+    List<Jogador> winningJogadors = [];
+    for (int i = 0; i < this.JogadorList.length; i++) {
+      Jogador tempJogador = this.JogadorList[i];
+      if (tempJogador.getIsInGame()) {
+        List<int> allValues = List<int>.filled(13, 0);
+        List<Carta?> tempCardsAll = tempJogadorsCardsAll(tempJogador);
+        for (int j = 0; j < tempCardsAll.length; j++) {
+          int cardValue = tempCardsAll[j]!.getValue();
+          allValues[cardValue - 2]++;
+        }
+        for (int k = 0; k < allValues.length; k++) {
+          if (allValues[k] >= 2 && !winningJogadors.contains(tempJogador)) {
+            winningJogadors.add(tempJogador);
+            break; // Sair do loop se encontrar um par
+          }
+        }
+      }
+    }
+    return winningJogadors;
+  }
+
+
+  List<Jogador> highCard()
+  {
+    List<Jogador> winningJogadors = [];
+    List<List<int>> sortedJogadorsHoleCards = List.generate(this.JogadorList.length, (index) => List<int>.filled(2, 0));
+    int highestCardColTwo = 0;
+    int highestCardColOne = 0;
+    bool tie = false;
+
+    for (int i = 0; i < this.JogadorList.length; i++) {
+      Jogador tempJogador = this.JogadorList[i];
+      if (tempJogador.getIsInGame()) {
+        List<int> tempHoleCards = [
+          tempJogador.getHoleCards()[0].getValue(),
+          tempJogador.getHoleCards()[1].getValue()
+        ];
+        tempHoleCards.sort();
+
+        if (tempHoleCards[1] > highestCardColTwo) {
+          highestCardColTwo = tempHoleCards[1];
+          winningJogadors.clear();
+          winningJogadors.add(tempJogador);
+          sortedJogadorsHoleCards[i][0] = i;
+          sortedJogadorsHoleCards[i][1] = tempHoleCards[0];
+        } else if (tempHoleCards[1] == highestCardColTwo) {
+          winningJogadors.add(tempJogador);
+          tie = true;
+          sortedJogadorsHoleCards[i][0] = i;
+          sortedJogadorsHoleCards[i][1] = tempHoleCards[0];
+        }
+      }
+    }
+
+    if (tie) {
+      winningJogadors.clear();
+      for (int k = 0; k < sortedJogadorsHoleCards.length; k++) {
+        if (sortedJogadorsHoleCards[k][1] > highestCardColOne) {
+          highestCardColOne = sortedJogadorsHoleCards[k][1];
+        }
+      }
+
+      for (int l = 0; l < sortedJogadorsHoleCards.length; l++) {
+        if (sortedJogadorsHoleCards[l][1] == highestCardColOne) {
+          winningJogadors.add(this.JogadorList[l]);
+        }
+      }
+    }
+
+    return winningJogadors;
+  }
+
+
+
+  List<int> getValuesOfSuit(List<Carta?> JogadorsCardsAll, String suit)
+  {
+    List<int> result = [];
+    for (int i = 0; i < JogadorsCardsAll.length; i++) {
+      if (JogadorsCardsAll[i] != null && JogadorsCardsAll[i]!.getSuit().contains(suit)) {
+        result.add(JogadorsCardsAll[i]!.getValue());
+      }
+    }
+    return result;
+  }
+
+
+  List<int> getValuesOfAllCards(List<Carta?> JogadorsCardsAll) {
+    List<int> result = [];
+    for (int i = 0; i < JogadorsCardsAll.length; i++) {
+      if (JogadorsCardsAll[i] != null) {
+        result.add(JogadorsCardsAll[i]!.getValue());
+      }
+    }
+    return result;
+  }
+
 }
 
-void main() {
-  final pokerGame = PokerGame();
-  pokerGame.menuPrincipal();
+void main(List<String> args) {
+  PokerGame pg = new PokerGame(1);
+  //pg.JogadorList.add(Jogador(name: "Scott", balance: 0, holeCards: [Carta(4, "Hearts"), Carta(10, "Diamonds")]));
+  //pg.JogadorList.add(Jogador(name: "1Findawg", balance: 0, holeCards: [Carta(10, "Hearts"), Carta(5, "Diamonds")]));
+  //pg.JogadorList.add(Jogador(name: "Jack", balance: 0, holeCards: [Carta(2, "Hearts"), Carta(3, "Diamonds")]));
+  //pg.communityCards = [Carta(11, "Hearts"), Carta(9, "Hearts"), Carta(2, "Spades"), Carta(8, "Hearts"), Carta(13, "Spades")];
+
+
 }
